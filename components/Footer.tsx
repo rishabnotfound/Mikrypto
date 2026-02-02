@@ -25,11 +25,11 @@ export default function Footer() {
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Heart size={16} className="text-primary fill-primary" />
+              <Heart size={16} className="text-red-700 fill-red-700" />
             </motion.div>
             <span>by</span>
             <a
-              href="https://github.com/rishabnotfound"
+              href="https://github.com/rishabnotfound/Mikrypto"
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold text-white hover:text-primary transition-colors"

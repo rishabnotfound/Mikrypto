@@ -64,9 +64,9 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
-                Portfolio Dashboard
+                BTC Wallet Dashboard
               </h1>
-              <p className="text-gray-400">Track and manage your crypto wallets</p>
+              <p className="text-gray-400">Track and manage your Bitcoin wallets</p>
             </div>
             <CurrencySelector value={settings.preferredCurrency} onChange={setCurrency} />
           </div>

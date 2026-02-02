@@ -94,7 +94,11 @@ export function calculateTotalBalance(wallets: Wallet[]): number {
 /**
  * Generate chart data from transactions
  */
-export function generateChartData(transactions: Transaction[], days: number = 30): ChartDataPoint[] {
+export function generateChartData(
+  transactions: Transaction[],
+  days: number = 30,
+  currentPrice: number = 0
+): ChartDataPoint[] {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const data: ChartDataPoint[] = [];
@@ -105,13 +109,16 @@ export function generateChartData(transactions: Transaction[], days: number = 30
     const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
     const relevantTxs = transactions.filter(tx => tx.timestamp <= timestamp);
-    const balance = relevantTxs.reduce((sum, tx) => {
+    const balanceInCrypto = relevantTxs.reduce((sum, tx) => {
       return sum + (tx.type === "receive" ? tx.amount : -tx.amount);
     }, 0);
 
+    // Convert crypto balance to USD
+    const balanceInUSD = balanceInCrypto * currentPrice;
+
     data.push({
       date: dateStr,
-      balance: Math.max(0, balance),
+      balance: Math.max(0, balanceInUSD),
       timestamp,
     });
   }

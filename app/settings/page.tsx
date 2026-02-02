@@ -16,7 +16,6 @@ import {
   Settings as SettingsIcon,
   Database,
   Palette,
-  Bell,
   RefreshCw,
 } from "lucide-react";
 import { clearAllData } from "@/lib/storage";
@@ -92,7 +91,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6"
+            className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6 overflow-visible"
           >
             <div className="flex items-center gap-3 mb-6">
               <Palette size={24} className="text-primary" />
@@ -114,71 +113,66 @@ export default function SettingsPage() {
                 />
               </div>
 
-              {/* Theme */}
-              <div className="flex items-center justify-between pt-4 border-t border-primary/10">
-                <div>
-                  <p className="text-white font-medium mb-1">Theme</p>
-                  <p className="text-sm text-gray-400">Current theme: Black & Red</p>
+              {/* Auto Refresh */}
+              <div className="flex flex-col pt-4 border-t border-primary/10">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-white font-medium mb-1">Auto Refresh</p>
+                    <p className="text-sm text-gray-400">Automatically update wallet balances</p>
+                  </div>
+                  <button
+                    onClick={() => updateSettings({ autoRefresh: !settings.autoRefresh })}
+                    className={`relative w-14 h-8 rounded-full transition-colors ${
+                      settings.autoRefresh ? "bg-primary" : "bg-gray-600"
+                    }`}
+                  >
+                    <motion.div
+                      animate={{ x: settings.autoRefresh ? 24 : 2 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className="absolute top-1 w-6 h-6 rounded-full bg-white"
+                    />
+                  </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-black border-2 border-primary" />
-                  <div className="w-8 h-8 rounded-full bg-primary" />
-                </div>
-              </div>
-            </div>
-          </motion.section>
 
-          {/* Notifications */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Bell size={24} className="text-primary" />
-              <h2 className="text-2xl font-bold text-white">Notifications</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white font-medium mb-1">Enable Notifications</p>
-                  <p className="text-sm text-gray-400">
-                    Get notified about important wallet activities
-                  </p>
-                </div>
-                <button
-                  onClick={() => updateSettings({ notifications: !settings.notifications })}
-                  className={`relative w-14 h-8 rounded-full transition-colors ${
-                    settings.notifications ? "bg-primary" : "bg-gray-600"
-                  }`}
-                >
+                {/* Refresh Interval Slider */}
+                {settings.autoRefresh && (
                   <motion.div
-                    animate={{ x: settings.notifications ? 24 : 2 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="absolute top-1 w-6 h-6 rounded-full bg-white"
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-primary/10">
-                <div>
-                  <p className="text-white font-medium mb-1">Auto Refresh</p>
-                  <p className="text-sm text-gray-400">Automatically update wallet balances</p>
-                </div>
-                <button
-                  onClick={() => updateSettings({ autoRefresh: !settings.autoRefresh })}
-                  className={`relative w-14 h-8 rounded-full transition-colors ${
-                    settings.autoRefresh ? "bg-primary" : "bg-gray-600"
-                  }`}
-                >
-                  <motion.div
-                    animate={{ x: settings.autoRefresh ? 24 : 2 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="absolute top-1 w-6 h-6 rounded-full bg-white"
-                  />
-                </button>
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 pt-4 border-t border-primary/10"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm text-gray-400">Refresh Interval</p>
+                      <p className="text-sm text-primary font-medium">
+                        {settings.refreshInterval} minutes
+                      </p>
+                    </div>
+                    <input
+                      type="range"
+                      min="30"
+                      max="120"
+                      step="15"
+                      value={settings.refreshInterval}
+                      onChange={(e) =>
+                        updateSettings({ refreshInterval: parseInt(e.target.value) })
+                      }
+                      className="w-full h-2 bg-dark-tertiary rounded-lg appearance-none cursor-pointer accent-primary slider"
+                      style={{
+                        background: `linear-gradient(to right, #D6A35C 0%, #D6A35C ${
+                          ((settings.refreshInterval - 30) / (120 - 30)) * 100
+                        }%, #1A1A1A ${
+                          ((settings.refreshInterval - 30) / (120 - 30)) * 100
+                        }%, #1A1A1A 100%)`,
+                      }}
+                    />
+                    <div className="flex justify-between mt-2 text-xs text-gray-500">
+                      <span>30 min</span>
+                      <span>1 hr</span>
+                      <span>2 hrs</span>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </div>
           </motion.section>
@@ -187,7 +181,7 @@ export default function SettingsPage() {
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
             className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6"
           >
             <div className="flex items-center gap-3 mb-6">
@@ -255,7 +249,7 @@ export default function SettingsPage() {
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.3 }}
             className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-red-500/30 p-6"
           >
             <div className="flex items-center gap-3 mb-6">

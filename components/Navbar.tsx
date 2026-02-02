@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Settings, Home, Menu, X } from "lucide-react";
@@ -28,20 +29,26 @@ export default function Navbar() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden md:block"
+        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden md:block"
       >
         <div className="relative">
           {/* Glass morphism background */}
           <div className="absolute inset-0 bg-dark-tertiary/40 backdrop-blur-xl rounded-full border border-primary/20" />
 
           {/* Navigation content */}
-          <div className="relative flex items-center gap-2 px-6 py-3">
+          <div className="relative flex items-center gap-3 px-8 py-4">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 mr-4 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="text-white font-bold text-sm">M</span>
+            <Link href="/" className="flex items-center gap-4 mr-6 group">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-dark-secondary border-2 border-primary/30 group-hover:scale-110 group-hover:border-primary/50 transition-all">
+                <Image
+                  src="/logo.png"
+                  alt="Mikrypto Logo"
+                  width={48}
+                  height={48}
+                  className="object-cover"
+                />
               </div>
-              <span className="text-white font-bold text-lg hidden lg:block">Mikrypto</span>
+              <span className="text-text-main font-bold text-xl hidden lg:block">Mikrypto</span>
             </Link>
 
             {/* Navigation Links */}
@@ -54,8 +61,8 @@ export default function Navbar() {
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className={`relative px-4 py-2 rounded-full transition-colors ${
-                        isActive ? "text-white" : "text-gray-400 hover:text-white"
+                      className={`relative px-5 py-2.5 rounded-full transition-colors ${
+                        isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
                       }`}
                     >
                       {/* Active indicator */}
@@ -68,9 +75,9 @@ export default function Navbar() {
                       )}
 
                       {/* Link content */}
-                      <div className="relative flex items-center gap-2">
-                        <Icon size={18} />
-                        <span className="text-sm font-medium">{label}</span>
+                      <div className="relative flex items-center gap-2.5">
+                        <Icon size={20} />
+                        <span className="text-base font-medium">{label}</span>
                       </div>
                     </motion.div>
                   </Link>
@@ -91,17 +98,23 @@ export default function Navbar() {
         <div className="bg-dark-tertiary/95 backdrop-blur-xl border-b border-primary/20">
           <div className="flex items-center justify-between px-4 py-4">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-dark rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">M</span>
+            <Link href="/" className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-dark-secondary border-2 border-primary/30">
+                <Image
+                  src="/logo.png"
+                  alt="Mikrypto Logo"
+                  width={40}
+                  height={40}
+                  className="object-cover"
+                />
               </div>
-              <span className="text-white font-bold text-lg">Mikrypto</span>
+              <span className="text-text-main font-bold text-lg">Mikrypto</span>
             </Link>
 
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-white p-2 hover:bg-primary/10 rounded-lg transition-colors"
+              className="text-text-main p-2 hover:bg-primary/10 rounded-lg transition-colors"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -131,8 +144,8 @@ export default function Navbar() {
                           whileTap={{ scale: 0.98 }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                             isActive
-                              ? "bg-primary/20 text-white border border-primary/40"
-                              : "text-gray-400 hover:bg-primary/5 hover:text-white"
+                              ? "bg-primary/20 text-text-main border border-primary/40"
+                              : "text-text-muted hover:bg-primary/5 hover:text-text-main"
                           }`}
                         >
                           <Icon size={20} />

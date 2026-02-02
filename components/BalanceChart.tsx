@@ -82,7 +82,15 @@ export default function BalanceChart({ data, currency = "USD", showArea = true }
             stroke="#666"
             tick={{ fill: "#888", fontSize: 12 }}
             tickLine={false}
-            tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
+            tickFormatter={(value) => {
+              if (value >= 1000000) {
+                return `$${(value / 1000000).toFixed(1)}M`;
+              } else if (value >= 1000) {
+                return `$${(value / 1000).toFixed(1)}k`;
+              } else {
+                return `$${value.toFixed(0)}`;
+              }
+            }}
           />
 
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#FF0000", strokeWidth: 2 }} />

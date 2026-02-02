@@ -1,16 +1,14 @@
 /**
  * AddWalletModal Component
- * Modal form to add new wallets with real blockchain addresses
+ * Modal form to add Bitcoin wallet addresses with verification
  */
 
 "use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2 } from "lucide-react";
-import { Chain } from "@/lib/types";
-import { isValidAddress } from "@/lib/utils";
-import { getCoinIdFromChain, refreshWalletData, getCoinLogo } from "@/lib/api";
+import { X, Plus, Loader2, Bitcoin } from "lucide-react";
+import { refreshWalletData, getCoinLogo } from "@/lib/api";
 import { addWallet } from "@/lib/storage";
 
 interface AddWalletModalProps {
@@ -19,36 +17,11 @@ interface AddWalletModalProps {
   onSuccess: () => void;
 }
 
-const CHAINS: Chain[] = [
-  "Ethereum",
-  "Bitcoin",
-  "Binance Smart Chain",
-  "Solana",
-  "Polygon",
-  "Avalanche",
-  "Arbitrum",
-  "Optimism",
-  "Base",
-];
-
-const CHAIN_SYMBOLS: Record<Chain, string> = {
-  Ethereum: "ETH",
-  Bitcoin: "BTC",
-  "Binance Smart Chain": "BNB",
-  Solana: "SOL",
-  Polygon: "MATIC",
-  Avalanche: "AVAX",
-  Arbitrum: "ETH",
-  Optimism: "ETH",
-  Base: "ETH",
-  Other: "CRYPTO",
-};
-
 export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalProps) {
   const [nickname, setNickname] = useState("");
   const [address, setAddress] = useState("");
-  const [chain, setChain] = useState<Chain>("Ethereum");
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,34 +35,45 @@ export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWallet
     }
 
     if (!address.trim()) {
-      setError("Please enter a wallet address");
-      return;
-    }
-
-    if (!isValidAddress(address, chain)) {
-      setError("Invalid address format for selected chain");
+      setError("Please enter a Bitcoin wallet address");
       return;
     }
 
     setLoading(true);
+    setVerifying(true);
 
     try {
-      // Fetch real wallet data from blockchain
-      const coinId = getCoinIdFromChain(chain);
-      const coinSymbol = CHAIN_SYMBOLS[chain];
+      // Step 1: Verify address using API
+      const verifyResponse = await fetch('/api/verify-address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: address.trim() }),
+      });
 
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.valid) {
+        setError(verifyData.error || 'Invalid Bitcoin address');
+        setLoading(false);
+        setVerifying(false);
+        return;
+      }
+
+      setVerifying(false);
+
+      // Step 2: Fetch wallet data from blockchain
       const [walletData, logoUrl] = await Promise.all([
-        refreshWalletData(address, chain, coinSymbol),
-        getCoinLogo(coinId),
+        refreshWalletData(address.trim(), "Bitcoin", "BTC"),
+        getCoinLogo("bitcoin"),
       ]);
 
-      // Add wallet to storage
+      // Step 3: Add wallet to storage
       addWallet({
         nickname: nickname.trim(),
         address: address.trim(),
-        chain,
-        coin: chain,
-        coinSymbol,
+        chain: "Bitcoin",
+        coin: "Bitcoin",
+        coinSymbol: "BTC",
         coinLogo: logoUrl,
         balance: walletData.balance,
         balanceUSD: walletData.balanceUSD,
@@ -99,14 +83,14 @@ export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWallet
       // Reset form and close
       setNickname("");
       setAddress("");
-      setChain("Ethereum");
       onSuccess();
       onClose();
     } catch (err) {
-      setError("Failed to fetch wallet data. Please check the address and try again.");
+      setError("Failed to add wallet. Please check the address and try again.");
       console.error("Error adding wallet:", err);
     } finally {
       setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -145,10 +129,10 @@ export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWallet
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
-                      <Plus size={20} className="text-primary" />
+                    <div className="w-10 h-10 rounded-full bg-orange-500/20 border border-orange-500/40 flex items-center justify-center">
+                      <Bitcoin size={20} className="text-orange-500" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white">Add New Wallet</h2>
+                    <h2 className="text-2xl font-bold text-white">Add Bitcoin Wallet</h2>
                   </div>
 
                   <button
@@ -182,53 +166,36 @@ export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWallet
                       type="text"
                       value={nickname}
                       onChange={(e) => setNickname(e.target.value)}
-                      placeholder="e.g., My Main Wallet"
+                      placeholder="e.g., My Main Bitcoin Wallet"
                       disabled={loading}
                       className="w-full px-4 py-3 rounded-xl bg-dark-tertiary/60 border border-primary/20 focus:border-primary/40 outline-none text-white placeholder-gray-600 transition-all disabled:opacity-50"
                     />
                   </div>
 
-                  {/* Chain Selection */}
+                  {/* Bitcoin Address */}
                   <div>
                     <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Blockchain Network
-                    </label>
-                    <select
-                      value={chain}
-                      onChange={(e) => setChain(e.target.value as Chain)}
-                      disabled={loading}
-                      className="w-full px-4 py-3 rounded-xl bg-dark-tertiary/60 border border-primary/20 focus:border-primary/40 outline-none text-white cursor-pointer transition-all disabled:opacity-50"
-                    >
-                      {CHAINS.map((c) => (
-                        <option key={c} value={c}>
-                          {c} ({CHAIN_SYMBOLS[c]})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Address */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
-                      Wallet Address
+                      Bitcoin Wallet Address
                     </label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder={
-                        chain === "Bitcoin"
-                          ? "bc1q... or 1... or 3..."
-                          : chain === "Solana"
-                          ? "Solana address"
-                          : "0x..."
-                      }
+                      placeholder="bc1q... or 1... or 3..."
                       disabled={loading}
                       className="w-full px-4 py-3 rounded-xl bg-dark-tertiary/60 border border-primary/20 focus:border-primary/40 outline-none text-white placeholder-gray-600 font-mono text-sm transition-all disabled:opacity-50"
                     />
-                    <p className="mt-2 text-xs text-gray-500">
-                      Enter your wallet's public address. We'll fetch the balance and transactions.
-                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-gray-500">
+                        Supports all Bitcoin address formats: Legacy (1...), P2SH (3...), and Bech32 (bc1...)
+                      </p>
+                      {verifying && (
+                        <p className="text-xs text-orange-500 flex items-center gap-1">
+                          <Loader2 size={12} className="animate-spin" />
+                          Verifying address on blockchain...
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Buttons */}
@@ -243,12 +210,12 @@ export default function AddWalletModal({ isOpen, onClose, onSuccess }: AddWallet
                       {loading ? (
                         <>
                           <Loader2 size={20} className="animate-spin" />
-                          <span>Adding Wallet...</span>
+                          <span>{verifying ? 'Verifying Address...' : 'Fetching Data...'}</span>
                         </>
                       ) : (
                         <>
-                          <Plus size={20} />
-                          <span>Add Wallet</span>
+                          <Bitcoin size={20} />
+                          <span>Add Bitcoin Wallet</span>
                         </>
                       )}
                     </motion.button>

@@ -9,15 +9,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#FF0000",
-        "primary-dark": "#CC0000",
-        "primary-light": "#FF3333",
+        primary: "#D6A35C", // Deep warm amber/gold
+        "primary-dark": "#B8884A",
+        "primary-light": "#E8C17D",
+        secondary: "#7A1F2B", // Muted wine red
+        "secondary-dark": "#5A1720",
+        "secondary-light": "#9A2835",
         dark: "#000000",
         "dark-secondary": "#0A0A0A",
         "dark-tertiary": "#1A1A1A",
+        text: {
+          main: "#EDEDED",
+          muted: "#9A9A9A",
+        },
       },
       backgroundImage: {
-        "glass-gradient": "linear-gradient(135deg, rgba(255, 0, 0, 0.1), rgba(255, 0, 0, 0.05))",
+        "glass-gradient": "linear-gradient(135deg, rgba(214, 163, 92, 0.1), rgba(214, 163, 92, 0.05))",
       },
       backdropBlur: {
         xs: "2px",

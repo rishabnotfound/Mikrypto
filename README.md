@@ -8,42 +8,46 @@
 
 # <p align="center">Mikrypto</p>
 
-A professional cryptocurrency wallet tracker with **live blockchain data** and sleek black & red anime-inspired design.
+A professional **Bitcoin wallet tracker** with **live blockchain data** from Mempool.space
 
 ## Features
 
-- **Live Data** - Real-time wallet balances from blockchain APIs
-- **Multi-Chain Support** - Ethereum, Bitcoin, BSC, Solana, Polygon, Avalanche, Arbitrum, Optimism, Base
-- **Live Prices** - Real-time crypto prices from CoinGecko
-- **Transaction History** - Fetch actual blockchain transactions
-- **Balance Charts** - 30-day balance trend graphs
-- **Add Wallets** - Add real wallet addresses and track live balances
+- **Bitcoin-Only Support** - Track Bitcoin wallets exclusively
+- **Live Data** - Real-time Bitcoin balances from Mempool.space
+- **Live BTC Price** - Real-time Bitcoin prices from CoinGecko
+- **Transaction History** - Fetch actual Bitcoin transactions with send/receive detection
+- **Balance Charts** - 30-day balance trend graphs in your preferred currency
+- **Address Verification** - Validates Bitcoin addresses before adding
 - **Backup/Restore** - Export and import wallet data as JSON
-- **Currency Conversion** - Real currency conversion between USD, EUR, GBP, INR, JPY, AUD, CAD, CNY
-- **Glass Morphism UI** - Modern design with smooth Framer Motion animations
+- **Multi-Currency Support** - View balances in USD, EUR, GBP, INR, JPY, AUD, CAD, CNY with real exchange rates
 - **Fully Responsive** - Optimized for all devices
 
 ## Tech Stack
 
 - **Next.js 14** (App Router)
 - **TypeScript**
-- **Tailwind CSS** (Black & Red theme)
 - **Framer Motion** (Animations)
 - **Recharts** (Charts)
-- **Real APIs**: CoinGecko, Etherscan, BlockCypher, Solana RPC
+- **Real APIs**: Mempool.space (Bitcoin data), fawazahmed0 CDN (currency rates)
 
 ## How to Use
 
 1. Click **"Add Wallet"** button
 2. Enter wallet nickname
-3. Select blockchain (Ethereum, Bitcoin, etc.)
-4. Paste your wallet address
-5. Click **"Add Wallet"** - it will fetch live balance!
+3. Paste your Bitcoin wallet address
+4. Address is verified via Mempool.space API
+5. Click **"Add Wallet"** - it will fetch live balance and transaction history!
+
+## Supported Bitcoin Address Formats
+
+- **Legacy (P2PKH)**: Starts with `1` (e.g., `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`)
+- **P2SH**: Starts with `3` (e.g., `3J98t1WpEZ73CNmYviecrnyiWrnqRhWNLy`)
+- **Bech32 (SegWit)**: Starts with `bc1` (e.g., `bc1q3kdnhs37nyh0qghxkkwrmpd63d9jd93l9dn948`)
 
 ## Data Management
 
-- **Add Wallets**: Enter real blockchain addresses
-- **Live Sync**: Balances update from blockchain
+- **Add Wallets**: Enter real Bitcoin addresses (verified before adding)
+- **Live Sync**: Balances and transactions update from Mempool.space
 - **Backup**: Export as JSON from Settings
 - **Restore**: Import from JSON backup
 - **Storage**: Local storage (private, no server)

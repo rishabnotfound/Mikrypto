@@ -9,8 +9,10 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Wallet as WalletType, Currency } from "@/lib/types";
+import { Wallet as WalletType, Currency, ChartDataPoint } from "@/lib/types";
 import { getWalletById } from "@/lib/storage";
+import { getCryptoPrice, getCoinIdFromChain } from "@/lib/api";
+import { convertCurrencyAsync } from "@/lib/currency";
 import {
   formatCurrency,
   formatCrypto,
@@ -39,17 +41,51 @@ export default function WalletDetailsPage() {
   const [wallet, setWallet] = useState<WalletType | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [convertedChartData, setConvertedChartData] = useState<ChartDataPoint[]>([]);
 
   useEffect(() => {
-    const id = params.id as string;
-    const data = getWalletById(id);
-    setWallet(data);
-    setLoading(false);
+    const loadWalletData = async () => {
+      const id = params.id as string;
+      const data = getWalletById(id);
+      setWallet(data);
 
-    if (!data) {
-      setTimeout(() => router.push("/"), 2000);
-    }
+      if (!data) {
+        setTimeout(() => router.push("/"), 2000);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch current price for the crypto
+      const coinId = getCoinIdFromChain(data.chain);
+      const price = await getCryptoPrice(coinId);
+      setCurrentPrice(price);
+      setLoading(false);
+    };
+
+    loadWalletData();
   }, [params.id, router]);
+
+  // Convert chart data to user's preferred currency
+  useEffect(() => {
+    const convertChartData = async () => {
+      if (!wallet || !currentPrice) return;
+
+      const chartData = generateChartData(wallet.transactions, 30, currentPrice);
+
+      // Convert each data point from USD to user's preferred currency
+      const converted = await Promise.all(
+        chartData.map(async (point) => ({
+          ...point,
+          balance: await convertCurrencyAsync(point.balance, "USD", settings.preferredCurrency),
+        }))
+      );
+
+      setConvertedChartData(converted);
+    };
+
+    convertChartData();
+  }, [wallet, currentPrice, settings.preferredCurrency]);
 
   const handleCopyAddress = async () => {
     if (!wallet) return;
@@ -82,7 +118,6 @@ export default function WalletDetailsPage() {
   }
 
   const chainColor = getChainColor(wallet.chain);
-  const chartData = generateChartData(wallet.transactions, 30);
 
   return (
     <div className="min-h-screen pb-12">
@@ -246,7 +281,7 @@ export default function WalletDetailsPage() {
           className="mb-8 rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6"
         >
           <h2 className="text-2xl font-bold text-white mb-6">Balance Trend</h2>
-          <BalanceChart data={chartData} currency={settings.preferredCurrency} />
+          <BalanceChart data={convertedChartData} currency={settings.preferredCurrency} />
         </motion.div>
 
         {/* Transaction History */}
@@ -257,7 +292,12 @@ export default function WalletDetailsPage() {
           className="rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 p-6"
         >
           <h2 className="text-2xl font-bold text-white mb-6">Transaction History</h2>
-          <TransactionHistory transactions={wallet.transactions} coinSymbol={wallet.coinSymbol} />
+          <TransactionHistory
+            transactions={wallet.transactions}
+            coinSymbol={wallet.coinSymbol}
+            currentPrice={currentPrice}
+            currency={settings.preferredCurrency as Currency}
+          />
         </motion.div>
       </div>
     </div>

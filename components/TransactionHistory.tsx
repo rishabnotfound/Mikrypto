@@ -5,21 +5,47 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Transaction } from "@/lib/types";
+import { Transaction, Currency } from "@/lib/types";
 import { formatCurrency, formatDate, shortenAddress } from "@/lib/utils";
+import { convertCurrencyAsync } from "@/lib/currency";
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, Filter } from "lucide-react";
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
   coinSymbol: string;
+  currentPrice: number; // Current crypto price in USD
+  currency: Currency; // User's preferred currency
 }
 
 type FilterType = "all" | "send" | "receive";
 
-export default function TransactionHistory({ transactions, coinSymbol }: TransactionHistoryProps) {
+export default function TransactionHistory({
+  transactions,
+  coinSymbol,
+  currentPrice,
+  currency
+}: TransactionHistoryProps) {
   const [filter, setFilter] = useState<FilterType>("all");
+  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, number>>(new Map());
+
+  // Convert all transaction amounts to user's preferred currency
+  useEffect(() => {
+    const convertAmounts = async () => {
+      const amounts = new Map<string, number>();
+
+      for (const tx of transactions) {
+        const amountInUSD = (tx.amount || 0) * currentPrice; // Convert crypto to USD
+        const converted = await convertCurrencyAsync(amountInUSD, "USD", currency);
+        amounts.set(tx.id, converted);
+      }
+
+      setConvertedAmounts(amounts);
+    };
+
+    convertAmounts();
+  }, [transactions, currentPrice, currency]);
 
   const filteredTransactions = transactions.filter((tx) => {
     if (filter === "all") return true;
@@ -145,7 +171,7 @@ export default function TransactionHistory({ transactions, coinSymbol }: Transac
                             {(tx.amount || 0).toFixed(4)} {coinSymbol}
                           </div>
                           <div className="text-sm text-gray-400">
-                            {formatCurrency((tx.amount || 0) * 1000, "USD")}
+                            {formatCurrency(convertedAmounts.get(tx.id) || 0, currency)}
                           </div>
                         </div>
                       </div>

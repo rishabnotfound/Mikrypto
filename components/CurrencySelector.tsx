@@ -44,7 +44,7 @@ export default function CurrencySelector({ value, onChange }: CurrencySelectorPr
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative z-50">
       {/* Selector button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
@@ -70,7 +70,7 @@ export default function CurrencySelector({ value, onChange }: CurrencySelectorPr
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full mt-2 right-0 min-w-[200px] rounded-xl bg-dark-tertiary/95 backdrop-blur-xl border border-primary/30 shadow-2xl overflow-hidden z-50"
+            className="absolute top-full mt-2 right-0 min-w-[200px] rounded-xl bg-dark-tertiary/95 backdrop-blur-xl border border-primary/30 shadow-2xl overflow-hidden z-[100]"
           >
             <div className="py-2">
               {currencies.map((currency) => (
@@ -80,7 +80,7 @@ export default function CurrencySelector({ value, onChange }: CurrencySelectorPr
                     onChange(currency.value);
                     setIsOpen(false);
                   }}
-                  whileHover={{ backgroundColor: "rgba(255, 0, 0, 0.1)" }}
+                  whileHover={{ backgroundColor: "rgba(214, 163, 92, 0.1)" }}
                   className={`w-full px-4 py-3 flex items-center gap-3 transition-colors ${
                     value === currency.value
                       ? "bg-primary/20 text-white"
