@@ -10,6 +10,10 @@
 
 A professional **Bitcoin wallet tracker** with **live blockchain data** from Mempool.space
 
+# Preview
+
+<img width="1469" height="833" alt="Screenshot 2026-02-04 at 8 46 55 PM" src="https://github.com/user-attachments/assets/8dbd78bb-ff10-4694-bef5-158110e7c6db" />
+
 ## Features
 
 - **Bitcoin-Only Support** - Track Bitcoin wallets exclusively
