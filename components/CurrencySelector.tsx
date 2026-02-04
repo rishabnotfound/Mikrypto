@@ -44,7 +44,7 @@ export default function CurrencySelector({ value, onChange }: CurrencySelectorPr
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative z-50">
+    <div ref={dropdownRef} className="relative">
       {/* Selector button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}

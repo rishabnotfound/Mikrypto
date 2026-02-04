@@ -1,6 +1,6 @@
 /**
  * Navbar Component
- * Glass-morphed pill-shaped navigation bar with smooth animations
+ * Mobile-first responsive navigation with glass morphism
  */
 
 "use client";
@@ -24,35 +24,33 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Desktop Navbar - Pill shaped with glass morphism */}
+      {/* Desktop Navbar - Pill shaped */}
       <motion.nav
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="fixed top-6 left-1/2 -translate-x-1/2 z-50 hidden md:block"
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden md:block"
       >
         <div className="relative">
-          {/* Glass morphism background */}
-          <div className="absolute inset-0 bg-dark-tertiary/40 backdrop-blur-xl rounded-full border border-primary/20" />
+          <div className="absolute inset-0 bg-dark-tertiary/60 backdrop-blur-xl rounded-full border border-orange-500/20" />
 
-          {/* Navigation content */}
-          <div className="relative flex items-center gap-3 px-8 py-4">
+          <div className="relative flex items-center gap-2 px-4 lg:px-6 py-3">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-4 mr-6 group">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-dark-secondary border-2 border-primary/30 group-hover:scale-110 group-hover:border-primary/50 transition-all">
+            <Link href="/" className="flex items-center gap-2 mr-4 group">
+              <div className="w-10 h-10 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
                 <Image
-                  src="/logo.png"
-                  alt="Mikrypto Logo"
-                  width={48}
-                  height={48}
-                  className="object-cover"
+                  src="/icon.png"
+                  alt="Mikrypto"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-text-main font-bold text-xl hidden lg:block">Mikrypto</span>
+              <span className="text-white font-bold text-lg hidden lg:block">Mikrypto</span>
             </Link>
 
             {/* Navigation Links */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {navLinks.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href;
 
@@ -61,23 +59,21 @@ export default function Navbar() {
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className={`relative px-5 py-2.5 rounded-full transition-colors ${
-                        isActive ? "text-text-main" : "text-text-muted hover:text-text-main"
+                      className={`relative px-4 py-2 rounded-full transition-colors ${
+                        isActive ? "text-white" : "text-gray-400 hover:text-white"
                       }`}
                     >
-                      {/* Active indicator */}
                       {isActive && (
                         <motion.div
                           layoutId="activeTab"
-                          className="absolute inset-0 bg-primary/20 border border-primary/40 rounded-full"
+                          className="absolute inset-0 bg-orange-500/20 border border-orange-500/40 rounded-full"
                           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                         />
                       )}
 
-                      {/* Link content */}
-                      <div className="relative flex items-center gap-2.5">
-                        <Icon size={20} />
-                        <span className="text-base font-medium">{label}</span>
+                      <div className="relative flex items-center gap-2">
+                        <Icon size={18} />
+                        <span className="text-sm font-medium">{label}</span>
                       </div>
                     </motion.div>
                   </Link>
@@ -88,33 +84,33 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Mobile Navbar */}
+      {/* Mobile Navbar - Fixed top bar */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
         className="fixed top-0 left-0 right-0 z-50 md:hidden"
       >
-        <div className="bg-dark-tertiary/95 backdrop-blur-xl border-b border-primary/20">
-          <div className="flex items-center justify-between px-4 py-4">
+        <div className="bg-dark-secondary/95 backdrop-blur-xl border-b border-orange-500/20">
+          <div className="flex items-center justify-between px-4 py-3">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-dark-secondary border-2 border-primary/30">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full overflow-hidden">
                 <Image
-                  src="/logo.png"
-                  alt="Mikrypto Logo"
-                  width={40}
-                  height={40}
-                  className="object-cover"
+                  src="/icon.png"
+                  alt="Mikrypto"
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-text-main font-bold text-lg">Mikrypto</span>
+              <span className="text-white font-bold">Mikrypto</span>
             </Link>
 
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-text-main p-2 hover:bg-primary/10 rounded-lg transition-colors"
+              className="text-white p-2 hover:bg-orange-500/10 rounded-lg transition-colors"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -127,10 +123,10 @@ export default function Navbar() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden border-t border-primary/10"
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden border-t border-orange-500/10"
               >
-                <div className="px-4 py-4 space-y-2">
+                <div className="px-4 py-3 space-y-1">
                   {navLinks.map(({ href, label, icon: Icon }) => {
                     const isActive = pathname === href;
 
@@ -142,10 +138,10 @@ export default function Navbar() {
                       >
                         <motion.div
                           whileTap={{ scale: 0.98 }}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                             isActive
-                              ? "bg-primary/20 text-text-main border border-primary/40"
-                              : "text-text-muted hover:bg-primary/5 hover:text-text-main"
+                              ? "bg-orange-500/20 text-white border border-orange-500/40"
+                              : "text-gray-400 hover:bg-orange-500/5 hover:text-white"
                           }`}
                         >
                           <Icon size={20} />
@@ -161,8 +157,8 @@ export default function Navbar() {
         </div>
       </motion.nav>
 
-      {/* Spacer for mobile */}
-      <div className="h-16 md:h-0" />
+      {/* Spacer for mobile navbar */}
+      <div className="h-14 md:h-0" />
     </>
   );
 }

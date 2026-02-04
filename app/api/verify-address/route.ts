@@ -1,9 +1,24 @@
 /**
  * Bitcoin Address Verification API
- * Verifies if a Bitcoin address is valid using Mempool.space API
+ * Verifies if a Bitcoin address is valid using mempool.js
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import mempoolJS from "@mempool/mempool.js";
+
+// Initialize mempool.js client
+const { bitcoin } = mempoolJS({
+  hostname: "mempool.space",
+});
+
+const { addresses } = bitcoin;
+
+// Validate Bitcoin address format
+function isValidBitcoinAddress(address: string): boolean {
+  const legacyRegex = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+  const bech32Regex = /^bc1[a-zA-HJ-NP-Z0-9]{39,59}$/;
+  return legacyRegex.test(address) || bech32Regex.test(address);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,68 +26,58 @@ export async function POST(request: NextRequest) {
 
     if (!address) {
       return NextResponse.json(
-        { valid: false, error: 'Address is required' },
+        { valid: false, error: "Address is required" },
         { status: 400 }
       );
     }
 
-    // Verify address format first (basic client-side check)
-    const isBitcoinAddress =
-      /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) || // Legacy/P2SH
-      /^bc1[a-zA-HJ-NP-Z0-9]{39,59}$/.test(address); // Bech32
-
-    if (!isBitcoinAddress) {
+    // Verify address format first
+    if (!isValidBitcoinAddress(address)) {
       return NextResponse.json(
-        { valid: false, error: 'Invalid Bitcoin address format' },
+        { valid: false, error: "Invalid Bitcoin address format" },
         { status: 400 }
       );
     }
 
-    // Verify address exists on blockchain using Mempool.space API
-    const response = await fetch(
-      `https://mempool.space/api/address/${address}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mikrypto Bitcoin Tracker',
-        },
+    // Verify address exists on blockchain using mempool.js
+    try {
+      const addressInfo = await addresses.getAddress({ address });
+
+      return NextResponse.json({
+        valid: true,
+        address: addressInfo.address,
+        chain_stats: addressInfo.chain_stats,
+        mempool_stats: addressInfo.mempool_stats,
+      });
+    } catch (apiError: any) {
+      // Address format is valid but doesn't exist on blockchain yet
+      // This is still a valid address, it just has no transactions
+      if (apiError.message?.includes("400") || apiError.message?.includes("404")) {
+        return NextResponse.json({
+          valid: true,
+          address: address,
+          chain_stats: {
+            funded_txo_count: 0,
+            funded_txo_sum: 0,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 0,
+          },
+          mempool_stats: {
+            funded_txo_count: 0,
+            funded_txo_sum: 0,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 0,
+          },
+        });
       }
-    );
-
-    if (response.status === 400) {
-      return NextResponse.json(
-        { valid: false, error: 'Invalid Bitcoin address' },
-        { status: 400 }
-      );
+      throw apiError;
     }
-
-    if (response.status === 404) {
-      return NextResponse.json(
-        { valid: false, error: 'Address not found on blockchain' },
-        { status: 404 }
-      );
-    }
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { valid: false, error: 'Failed to verify address' },
-        { status: 500 }
-      );
-    }
-
-    const data = await response.json();
-
-    // Address is valid and exists on blockchain
-    return NextResponse.json({
-      valid: true,
-      address: data.address,
-      chain_stats: data.chain_stats,
-      mempool_stats: data.mempool_stats,
-    });
   } catch (error) {
-    console.error('Address verification error:', error);
+    console.error("Address verification error:", error);
     return NextResponse.json(
-      { valid: false, error: 'Failed to verify address' },
+      { valid: false, error: "Failed to verify address" },
       { status: 500 }
     );
   }

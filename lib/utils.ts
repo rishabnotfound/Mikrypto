@@ -1,6 +1,6 @@
 /**
  * Utility functions for Mikrypto
- * Formatting, calculations, and helper functions
+ * Bitcoin-only wallet tracker utilities
  */
 
 import { Currency, Wallet, Transaction, ChartDataPoint } from "./types";
@@ -24,9 +24,7 @@ export function formatCurrency(
     CNY: "¥",
   };
 
-  // Handle null, undefined, or NaN
   const safeAmount = isNaN(amount) || amount == null ? 0 : amount;
-
   const symbol = symbols[currency];
   const formatted = safeAmount.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
@@ -37,12 +35,21 @@ export function formatCurrency(
 }
 
 /**
- * Format crypto amount with symbol
+ * Format Bitcoin amount
+ */
+export function formatBTC(amount: number): string {
+  const safeAmount = isNaN(amount) || amount == null ? 0 : amount;
+  return `${safeAmount.toLocaleString("en-US", {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 8,
+  })} BTC`;
+}
+
+/**
+ * Format crypto amount with symbol (kept for compatibility)
  */
 export function formatCrypto(amount: number, symbol: string): string {
-  // Handle null, undefined, or NaN
   const safeAmount = isNaN(amount) || amount == null ? 0 : amount;
-
   return `${safeAmount.toLocaleString("en-US", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 8,
@@ -82,11 +89,21 @@ export function formatDate(timestamp: number, format: "short" | "long" = "short"
 }
 
 /**
- * Calculate total portfolio value
+ * Calculate total portfolio value in USD
  */
 export function calculateTotalBalance(wallets: Wallet[]): number {
   return wallets.reduce((total, wallet) => {
     const balance = wallet.balanceUSD || 0;
+    return total + (isNaN(balance) ? 0 : balance);
+  }, 0);
+}
+
+/**
+ * Calculate total BTC balance
+ */
+export function calculateTotalBTC(wallets: Wallet[]): number {
+  return wallets.reduce((total, wallet) => {
+    const balance = wallet.balance || 0;
     return total + (isNaN(balance) ? 0 : balance);
   }, 0);
 }
@@ -104,17 +121,16 @@ export function generateChartData(
   const data: ChartDataPoint[] = [];
 
   for (let i = days; i >= 0; i--) {
-    const timestamp = now - (i * dayMs);
+    const timestamp = now - i * dayMs;
     const date = new Date(timestamp);
     const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-    const relevantTxs = transactions.filter(tx => tx.timestamp <= timestamp);
-    const balanceInCrypto = relevantTxs.reduce((sum, tx) => {
+    const relevantTxs = transactions.filter((tx) => tx.timestamp <= timestamp);
+    const balanceInBTC = relevantTxs.reduce((sum, tx) => {
       return sum + (tx.type === "receive" ? tx.amount : -tx.amount);
     }, 0);
 
-    // Convert crypto balance to USD
-    const balanceInUSD = balanceInCrypto * currentPrice;
+    const balanceInUSD = balanceInBTC * currentPrice;
 
     data.push({
       date: dateStr,
@@ -128,13 +144,8 @@ export function generateChartData(
 
 /**
  * Convert between currencies
- * Note: Using approximate exchange rates. For production, use live exchange rate API
  */
-export function convertCurrency(
-  amount: number,
-  from: Currency,
-  to: Currency
-): number {
+export function convertCurrency(amount: number, from: Currency, to: Currency): number {
   // Exchange rates relative to USD (approximate)
   const rates: Record<Currency, number> = {
     USD: 1,
@@ -147,7 +158,6 @@ export function convertCurrency(
     CNY: 7.24,
   };
 
-  // Convert from -> USD -> to
   const usdAmount = amount / rates[from];
   return usdAmount * rates[to];
 }
@@ -156,7 +166,7 @@ export function convertCurrency(
  * Generate unique ID
  */
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
@@ -168,44 +178,27 @@ export function calculatePercentageChange(oldValue: number, newValue: number): n
 }
 
 /**
- * Get chain color
+ * Bitcoin orange color
  */
-export function getChainColor(chain: string): string {
-  const colors: Record<string, string> = {
-    Ethereum: "#627EEA",
-    Bitcoin: "#F7931A",
-    "Binance Smart Chain": "#F3BA2F",
-    Solana: "#14F195",
-    Polygon: "#8247E5",
-    Avalanche: "#E84142",
-    Arbitrum: "#28A0F0",
-    Optimism: "#FF0420",
-    Base: "#0052FF",
-    Other: "#666666",
-  };
-
-  return colors[chain] || colors.Other;
+export function getBitcoinColor(): string {
+  return "#F7931A";
 }
 
 /**
- * Validate wallet address format
+ * Get chain color (kept for compatibility - always returns Bitcoin orange)
  */
-export function isValidAddress(address: string, chain: string): boolean {
-  if (!address) return false;
+export function getChainColor(_chain: string): string {
+  return "#F7931A";
+}
 
-  switch (chain) {
-    case "Ethereum":
-    case "Binance Smart Chain":
-    case "Polygon":
-    case "Arbitrum":
-    case "Optimism":
-    case "Base":
-      return /^0x[a-fA-F0-9]{40}$/.test(address);
-    case "Bitcoin":
-      return /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) || /^bc1[a-zA-HJ-NP-Z0-9]{39,59}$/.test(address);
-    case "Solana":
-      return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
-    default:
-      return address.length > 20;
-  }
+/**
+ * Validate Bitcoin address format
+ */
+export function isValidBitcoinAddress(address: string): boolean {
+  if (!address) return false;
+  // Legacy (P2PKH/P2SH) or Bech32 (P2WPKH/P2WSH)
+  return (
+    /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) ||
+    /^bc1[a-zA-HJ-NP-Z0-9]{39,59}$/.test(address)
+  );
 }

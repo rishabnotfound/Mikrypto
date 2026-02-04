@@ -1,213 +1,146 @@
 /**
- * API Service for fetching real blockchain data
- * Uses public APIs for prices, balances, and transactions
+ * Bitcoin API Service using @mempool/mempool.js
+ * Fetches live blockchain data from mempool.space
  */
 
-import { Chain, Transaction } from "./types";
+import mempoolJS from "@mempool/mempool.js";
+import { Transaction, Wallet, StoredWallet } from "./types";
+import {
+  getBalanceCache,
+  saveBalanceCache,
+  getTxCache,
+  saveTxCache,
+  prependTxCache,
+  appendTxCache,
+} from "./storage";
 
-// Free public APIs (no API key required for basic usage)
+// Initialize mempool.js client
+const { bitcoin } = mempoolJS({
+  hostname: "mempool.space",
+});
+
+const { addresses } = bitcoin;
+
+// CoinGecko API for price data
 const COINGECKO_API = "https://api.coingecko.com/api/v3";
-const MEMPOOL_API = "https://mempool.space/api";
 
-// Headers for Mempool.space scraping
-const MEMPOOL_HEADERS = {
-  "referer": "https://mempool.space/",
-  "origin": "https://mempool.space",
-  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-};
-
-// Chain to CoinGecko ID mapping
-const CHAIN_TO_COINGECKO_ID: Record<string, string> = {
-  Ethereum: "ethereum",
-  Bitcoin: "bitcoin",
-  "Binance Smart Chain": "binancecoin",
-  Solana: "solana",
-  Polygon: "matic-network",
-  Avalanche: "avalanche-2",
-  Arbitrum: "arbitrum",
-  Optimism: "optimism",
-  Base: "base",
-};
+// Bitcoin logo URL
+const BTC_LOGO = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png";
 
 /**
- * Get current price for a cryptocurrency
+ * Get current Bitcoin price in USD
  */
-export async function getCryptoPrice(coinId: string): Promise<number> {
+export async function getBitcoinPrice(): Promise<number> {
   try {
     const response = await fetch(
-      `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`,
-      { next: { revalidate: 60 } } // Cache for 60 seconds
-    );
-    const data = await response.json();
-    return data[coinId]?.usd || 0;
-  } catch (error) {
-    console.error(`Error fetching price for ${coinId}:`, error);
-    return 0;
-  }
-}
-
-/**
- * Get multiple crypto prices at once
- */
-export async function getMultiplePrices(
-  coinIds: string[]
-): Promise<Record<string, number>> {
-  try {
-    const ids = coinIds.join(",");
-    const response = await fetch(
-      `${COINGECKO_API}/simple/price?ids=${ids}&vs_currencies=usd`,
+      `${COINGECKO_API}/simple/price?ids=bitcoin&vs_currencies=usd`,
       { next: { revalidate: 60 } }
     );
     const data = await response.json();
-    const prices: Record<string, number> = {};
-    coinIds.forEach((id) => {
-      prices[id] = data[id]?.usd || 0;
-    });
-    return prices;
+    return data.bitcoin?.usd || 0;
   } catch (error) {
-    console.error("Error fetching multiple prices:", error);
-    return {};
-  }
-}
-
-/**
- * Get Ethereum balance and transactions (via Mempool-style scraping)
- */
-export async function getEthereumData(address: string) {
-  try {
-    // For Ethereum, we'll use a simple balance check
-    // Note: Mempool.space only supports Bitcoin
-    // For full functionality, you'd need Etherscan API or similar
-
-    // This is a placeholder - returns 0 balance for now
-    // To get real Ethereum data, use Etherscan API with your key
-    console.log("Ethereum support coming soon - add Etherscan API key");
-
-    return { balance: 0, transactions: [] };
-  } catch (error) {
-    console.error("Error fetching Ethereum data:", error);
-    return { balance: 0, transactions: [] };
-  }
-}
-
-/**
- * Get Bitcoin balance and transactions from Mempool.space
- */
-export async function getBitcoinData(address: string) {
-  try {
-    // Get balance
-    const balanceResponse = await fetch(`${MEMPOOL_API}/address/${address}`, {
-      headers: MEMPOOL_HEADERS,
-    });
-    const balanceData = await balanceResponse.json();
-
-    // Calculate balance: funded - spent (in satoshis, then convert to BTC)
-    const fundedSats = balanceData.chain_stats?.funded_txo_sum || 0;
-    const spentSats = balanceData.chain_stats?.spent_txo_sum || 0;
-    const balanceSats = fundedSats - spentSats;
-    const balance = balanceSats / 100000000; // Convert satoshis to BTC
-
-    // Get transactions
-    const txResponse = await fetch(`${MEMPOOL_API}/address/${address}/txs`, {
-      headers: MEMPOOL_HEADERS,
-    });
-    const transactions = await txResponse.json();
-
-    return { balance, transactions: transactions || [] };
-  } catch (error) {
-    console.error("Error fetching Bitcoin data:", error);
-    return { balance: 0, transactions: [] };
-  }
-}
-
-/**
- * Get Solana balance
- */
-export async function getSolanaBalance(address: string): Promise<number> {
-  try {
-    const response = await fetch("https://api.mainnet-beta.solana.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "getBalance",
-        params: [address],
-      }),
-    });
-    const data = await response.json();
-    return data.result?.value ? data.result.value / 1e9 : 0;
-  } catch (error) {
-    console.error("Error fetching Solana balance:", error);
+    console.error("Error fetching Bitcoin price:", error);
     return 0;
   }
 }
 
 /**
- * Get balance for any chain
+ * Get address data from mempool.space
  */
-export async function getWalletBalance(
-  address: string,
-  chain: Chain
-): Promise<{ balance: number; transactions: any[] }> {
-  switch (chain) {
-    case "Ethereum":
-    case "Arbitrum":
-    case "Optimism":
-    case "Base":
-      return await getEthereumData(address);
+export async function getAddressData(address: string) {
+  try {
+    const addressInfo = await addresses.getAddress({ address });
 
-    case "Bitcoin":
-      return await getBitcoinData(address);
+    // Calculate balance from chain_stats (in satoshis)
+    const fundedSats = addressInfo.chain_stats?.funded_txo_sum || 0;
+    const spentSats = addressInfo.chain_stats?.spent_txo_sum || 0;
+    const mempoolFunded = addressInfo.mempool_stats?.funded_txo_sum || 0;
+    const mempoolSpent = addressInfo.mempool_stats?.spent_txo_sum || 0;
 
-    case "Solana":
-      const balance = await getSolanaBalance(address);
-      return { balance, transactions: [] };
+    const balanceSats = (fundedSats - spentSats) + (mempoolFunded - mempoolSpent);
+    const balance = balanceSats / 100000000; // Convert satoshis to BTC
 
-    case "Binance Smart Chain":
-      // Use BSCScan API (similar to Etherscan)
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_BSCSCAN_API_KEY || "";
-        const response = await fetch(
-          `https://api.bscscan.com/api?module=account&action=balance&address=${address}&apikey=${apiKey}`
-        );
-        const data = await response.json();
-        const balance = data.result ? parseFloat(data.result) / 1e18 : 0;
-        return { balance, transactions: [] };
-      } catch {
-        return { balance: 0, transactions: [] };
-      }
-
-    case "Polygon":
-      // Use PolygonScan API
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY || "";
-        const response = await fetch(
-          `https://api.polygonscan.com/api?module=account&action=balance&address=${address}&apikey=${apiKey}`
-        );
-        const data = await response.json();
-        const balance = data.result ? parseFloat(data.result) / 1e18 : 0;
-        return { balance, transactions: [] };
-      } catch {
-        return { balance: 0, transactions: [] };
-      }
-
-    default:
-      return { balance: 0, transactions: [] };
+    return {
+      address: addressInfo.address,
+      balance,
+      chainStats: addressInfo.chain_stats,
+      mempoolStats: addressInfo.mempool_stats,
+    };
+  } catch (error) {
+    console.error("Error fetching address data:", error);
+    throw error;
   }
 }
 
 /**
- * Format Bitcoin transaction from Mempool.space to our Transaction type
+ * Get one page of confirmed transactions (25 per page)
+ * Use after_txid to get the next page
  */
-export function formatBitcoinTransaction(tx: any, address: string): Transaction {
+export async function getAddressTransactionsPage(
+  address: string,
+  afterTxId?: string
+): Promise<{ txs: any[]; hasMore: boolean }> {
+  try {
+    // Cast to any because mempool.js types don't include after_txid but API supports it
+    const txs = await addresses.getAddressTxsChain({ address, after_txid: afterTxId } as any);
+
+    if (!txs || txs.length === 0) {
+      return { txs: [], hasMore: false };
+    }
+
+    // If we got 25 transactions, there might be more
+    return { txs, hasMore: txs.length === 25 };
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    return { txs: [], hasMore: false };
+  }
+}
+
+/**
+ * Get first page of transactions (for initial load)
+ */
+export async function getAddressTransactions(address: string): Promise<any[]> {
+  const { txs } = await getAddressTransactionsPage(address);
+  return txs;
+}
+
+/**
+ * Get mempool (unconfirmed) transactions for an address
+ */
+export async function getAddressMempoolTxs(address: string): Promise<any[]> {
+  try {
+    const txs = await addresses.getAddressTxsMempool({ address });
+    return txs || [];
+  } catch (error) {
+    console.error("Error fetching mempool transactions:", error);
+    return [];
+  }
+}
+
+/**
+ * Get UTXOs for an address
+ */
+export async function getAddressUtxos(address: string) {
+  try {
+    const utxos = await addresses.getAddressTxsUtxo({ address });
+    return utxos || [];
+  } catch (error) {
+    console.error("Error fetching UTXOs:", error);
+    return [];
+  }
+}
+
+/**
+ * Format a raw transaction from mempool.space to our Transaction type
+ */
+export function formatTransaction(tx: any, userAddress: string): Transaction {
   // Check if user's address is in inputs (vin) or outputs (vout)
   const hasInputFromUser = tx.vin?.some(
-    (input: any) => input.prevout?.scriptpubkey_address === address
+    (input: any) => input.prevout?.scriptpubkey_address === userAddress
   );
 
   const hasOutputToUser = tx.vout?.some(
-    (output: any) => output.scriptpubkey_address === address
+    (output: any) => output.scriptpubkey_address === userAddress
   );
 
   // Determine transaction type and amount
@@ -219,140 +152,345 @@ export function formatBitcoinTransaction(tx: any, address: string): Transaction 
   if (hasInputFromUser && !hasOutputToUser) {
     // Pure SEND - user sent all funds away (no change back)
     type = "send";
-    // Amount = first output to someone else
     const recipientOutput = tx.vout?.find(
-      (output: any) => output.scriptpubkey_address !== address
+      (output: any) => output.scriptpubkey_address !== userAddress
     );
     amount = recipientOutput?.value || 0;
-    fromAddress = address;
+    fromAddress = userAddress;
     toAddress = recipientOutput?.scriptpubkey_address || "Unknown";
   } else if (hasInputFromUser && hasOutputToUser) {
     // SEND with change - user sent funds and got change back
     type = "send";
-    // Amount = output to OTHER address (not user's change address)
     const recipientOutput = tx.vout?.find(
-      (output: any) => output.scriptpubkey_address !== address
+      (output: any) => output.scriptpubkey_address !== userAddress
     );
     amount = recipientOutput?.value || 0;
-    fromAddress = address;
+    fromAddress = userAddress;
     toAddress = recipientOutput?.scriptpubkey_address || "Unknown";
   } else if (!hasInputFromUser && hasOutputToUser) {
     // RECEIVE - user received funds
     type = "receive";
-    // Amount = output TO user's address
     const userOutput = tx.vout?.find(
-      (output: any) => output.scriptpubkey_address === address
+      (output: any) => output.scriptpubkey_address === userAddress
     );
     amount = userOutput?.value || 0;
     fromAddress = tx.vin?.[0]?.prevout?.scriptpubkey_address || "Unknown";
-    toAddress = address;
+    toAddress = userAddress;
   }
 
   // Convert satoshis to BTC
   const amountBTC = amount / 100000000;
+  const feeBTC = (tx.fee || 0) / 100000000;
 
   return {
-    id: tx.txid || `tx_${Date.now()}`,
-    hash: tx.txid || "",
+    id: tx.txid,
+    hash: tx.txid,
     type,
     amount: amountBTC,
-    currency: "BTC",
-    timestamp: (tx.status?.block_time || Date.now() / 1000) * 1000,
+    timestamp: tx.status?.block_time ? tx.status.block_time * 1000 : Date.now(),
     from: fromAddress,
     to: toAddress,
     status: tx.status?.confirmed ? "confirmed" : "pending",
-    fee: (tx.fee || 0) / 100000000, // Convert fee to BTC
+    fee: feeBTC,
+    blockHeight: tx.status?.block_height,
   };
 }
 
 /**
- * Format Ethereum transaction (placeholder for future implementation)
+ * Validate a Bitcoin address
  */
-export function formatEthereumTransaction(tx: any, address: string): Transaction {
-  const isReceive = tx.to?.toLowerCase() === address.toLowerCase();
+export function isValidBitcoinAddress(address: string): boolean {
+  // Legacy addresses (P2PKH): start with 1
+  const legacyRegex = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+  // Bech32 addresses (P2WPKH/P2WSH): start with bc1
+  const bech32Regex = /^bc1[a-zA-HJ-NP-Z0-9]{39,59}$/;
 
-  const value = parseFloat(tx.value || "0");
-  const gasUsed = parseFloat(tx.gasUsed || "0");
-  const gasPrice = parseFloat(tx.gasPrice || "0");
-  const timestamp = parseInt(tx.timeStamp || "0");
-
-  return {
-    id: tx.hash || `tx_${Date.now()}`,
-    hash: tx.hash || "",
-    type: isReceive ? "receive" : "send",
-    amount: isNaN(value) ? 0 : value / 1e18,
-    currency: "ETH",
-    timestamp: isNaN(timestamp) ? Date.now() : timestamp * 1000,
-    from: tx.from || "",
-    to: tx.to || "",
-    status: tx.isError === "0" ? "confirmed" : "failed",
-    fee: isNaN(gasUsed) || isNaN(gasPrice) ? 0 : (gasUsed * gasPrice) / 1e18,
-  };
+  return legacyRegex.test(address) || bech32Regex.test(address);
 }
 
 /**
- * Get coin logo URL from CoinGecko
+ * Fetch complete wallet data for a stored wallet (with caching)
  */
-export async function getCoinLogo(coinId: string): Promise<string> {
+export async function fetchWalletData(storedWallet: StoredWallet): Promise<Wallet> {
   try {
-    const response = await fetch(`${COINGECKO_API}/coins/${coinId}`);
-    const data = await response.json();
-    return data.image?.large || data.image?.small || "";
+    const address = storedWallet.address;
+
+    // Check balance cache first (1 hour TTL)
+    const balanceCache = getBalanceCache(address);
+    const txCache = getTxCache(address);
+
+    let balance: number;
+    let balanceUSD: number;
+    let transactions: Transaction[];
+    let hasMoreTxs: boolean;
+    let lastTxId: string | undefined;
+
+    // If balance cache is valid AND has non-zero balance, use it
+    // If cached balance is 0, always re-fetch to verify (could be stale bad data)
+    if (balanceCache && balanceCache.balance > 0) {
+      balance = balanceCache.balance;
+      balanceUSD = balanceCache.balanceUSD;
+    } else {
+      // Fetch fresh balance data
+      const [addressData, btcPrice] = await Promise.all([
+        getAddressData(address),
+        getBitcoinPrice(),
+      ]);
+      balance = addressData.balance;
+      balanceUSD = addressData.balance * btcPrice;
+      // Only cache if we got valid data
+      if (balance >= 0 && btcPrice > 0) {
+        saveBalanceCache(address, balance, balanceUSD);
+      }
+    }
+
+    // For transactions: always check for new ones (mempool) and merge with cache
+    if (txCache && txCache.transactions.length > 0) {
+      // We have cached transactions - only fetch mempool (pending) txs
+      const mempoolTxs = await getAddressMempoolTxs(address);
+      const formattedMempoolTxs = mempoolTxs
+        .filter((tx: any) => tx && tx.txid)
+        .map((tx: any) => formatTransaction(tx, address));
+
+      // Merge mempool txs with cached (pending txs go first)
+      if (formattedMempoolTxs.length > 0) {
+        prependTxCache(address, formattedMempoolTxs);
+      }
+
+      // Get updated cache
+      const updatedCache = getTxCache(address);
+      transactions = updatedCache?.transactions || [];
+      hasMoreTxs = updatedCache?.hasMore || false;
+      lastTxId = updatedCache?.lastTxId;
+    } else {
+      // No cache - fetch first page of transactions
+      const [txsResult, mempoolTxs] = await Promise.all([
+        getAddressTransactionsPage(address),
+        getAddressMempoolTxs(address),
+      ]);
+
+      const allTxs = [...mempoolTxs, ...txsResult.txs];
+      transactions = allTxs
+        .filter((tx: any) => tx && tx.txid)
+        .map((tx: any) => formatTransaction(tx, address));
+
+      hasMoreTxs = txsResult.hasMore;
+      lastTxId = txsResult.txs.length > 0
+        ? txsResult.txs[txsResult.txs.length - 1]?.txid
+        : undefined;
+
+      // Save to cache
+      saveTxCache(address, transactions, hasMoreTxs, lastTxId);
+    }
+
+    return {
+      ...storedWallet,
+      balance,
+      balanceUSD,
+      transactions,
+      lastUpdated: Date.now(),
+      hasMoreTxs,
+      lastTxId,
+    };
   } catch (error) {
-    console.error(`Error fetching logo for ${coinId}:`, error);
-    return "";
+    console.error("Error fetching wallet data:", error);
+
+    // On error, try to fetch fresh data without caching
+    try {
+      const [addressData, btcPrice] = await Promise.all([
+        getAddressData(storedWallet.address),
+        getBitcoinPrice(),
+      ]);
+
+      return {
+        ...storedWallet,
+        balance: addressData.balance,
+        balanceUSD: addressData.balance * btcPrice,
+        transactions: [],
+        lastUpdated: Date.now(),
+        hasMoreTxs: false,
+      };
+    } catch {
+      // Complete failure - return zeros
+      return {
+        ...storedWallet,
+        balance: 0,
+        balanceUSD: 0,
+        transactions: [],
+        lastUpdated: Date.now(),
+        hasMoreTxs: false,
+      };
+    }
   }
 }
 
 /**
- * Get coin ID from chain name
+ * Fetch wallet data for multiple wallets (with caching)
  */
-export function getCoinIdFromChain(chain: Chain): string {
-  return CHAIN_TO_COINGECKO_ID[chain] || chain.toLowerCase();
+export async function fetchAllWalletsData(storedWallets: StoredWallet[]): Promise<Wallet[]> {
+  // Get BTC price once for all wallets
+  const btcPrice = await getBitcoinPrice();
+
+  // Fetch all wallet data
+  const wallets: Wallet[] = [];
+
+  for (const storedWallet of storedWallets) {
+    try {
+      const wallet = await fetchWalletData(storedWallet);
+
+      // If we got 0 balance but have a valid BTC price, double check by fetching fresh
+      if (wallet.balance === 0 && btcPrice > 0) {
+        try {
+          const addressData = await getAddressData(storedWallet.address);
+          if (addressData.balance > 0) {
+            wallet.balance = addressData.balance;
+            wallet.balanceUSD = addressData.balance * btcPrice;
+            saveBalanceCache(storedWallet.address, wallet.balance, wallet.balanceUSD);
+          }
+        } catch {
+          // Keep the 0 balance if re-fetch fails
+        }
+      }
+
+      wallets.push(wallet);
+
+      // Small delay between requests to avoid rate limiting
+      if (storedWallets.length > 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    } catch (error) {
+      console.error(`Error fetching data for wallet ${storedWallet.nickname}:`, error);
+
+      // Try to fetch fresh data on error
+      try {
+        const addressData = await getAddressData(storedWallet.address);
+        wallets.push({
+          ...storedWallet,
+          balance: addressData.balance,
+          balanceUSD: addressData.balance * btcPrice,
+          transactions: [],
+          lastUpdated: Date.now(),
+          hasMoreTxs: false,
+        });
+      } catch {
+        // Complete failure
+        wallets.push({
+          ...storedWallet,
+          balance: 0,
+          balanceUSD: 0,
+          transactions: [],
+          lastUpdated: Date.now(),
+          hasMoreTxs: false,
+        });
+      }
+    }
+  }
+
+  return wallets;
 }
 
 /**
- * Refresh wallet data (balance and price)
+ * Load more transactions for a wallet (pagination) - with caching
  */
-export async function refreshWalletData(
+export async function loadMoreTransactions(
   address: string,
-  chain: Chain,
-  coinSymbol: string
-) {
+  afterTxId: string
+): Promise<{ transactions: Transaction[]; hasMore: boolean; lastTxId?: string }> {
   try {
-    const coinId = getCoinIdFromChain(chain);
+    const { txs, hasMore } = await getAddressTransactionsPage(address, afterTxId);
 
-    // Fetch balance and price in parallel
-    const [{ balance, transactions }, price] = await Promise.all([
-      getWalletBalance(address, chain),
-      getCryptoPrice(coinId),
+    const transactions = txs
+      .filter((tx: any) => tx && tx.txid)
+      .map((tx: any) => formatTransaction(tx, address));
+
+    const newLastTxId = txs.length > 0 ? txs[txs.length - 1]?.txid : undefined;
+
+    // Append to cache
+    if (transactions.length > 0) {
+      appendTxCache(address, transactions, hasMore, newLastTxId);
+    }
+
+    return { transactions, hasMore, lastTxId: newLastTxId };
+  } catch (error) {
+    console.error("Error loading more transactions:", error);
+    return { transactions: [], hasMore: false };
+  }
+}
+
+/**
+ * Force refresh wallet data (bypass cache)
+ */
+export async function forceRefreshWalletData(storedWallet: StoredWallet): Promise<Wallet> {
+  const address = storedWallet.address;
+
+  try {
+    // Fetch everything fresh
+    const [addressData, txsResult, mempoolTxs, btcPrice] = await Promise.all([
+      getAddressData(address),
+      getAddressTransactionsPage(address),
+      getAddressMempoolTxs(address),
+      getBitcoinPrice(),
     ]);
 
-    const balanceUSD = balance * price;
+    const balance = addressData.balance;
+    const balanceUSD = addressData.balance * btcPrice;
 
-    // Format transactions based on chain
-    const formattedTransactions: Transaction[] = transactions
-      .slice(0, 50)
-      .filter((tx: any) => tx && (tx.txid || tx.hash)) // Filter out invalid transactions
-      .map((tx: any) => {
-        // Use Bitcoin formatter for Bitcoin, Ethereum formatter for others
-        if (chain === "Bitcoin") {
-          return formatBitcoinTransaction(tx, address);
-        }
-        return formatEthereumTransaction(tx, address);
-      });
+    const allTxs = [...mempoolTxs, ...txsResult.txs];
+    const transactions = allTxs
+      .filter((tx: any) => tx && tx.txid)
+      .map((tx: any) => formatTransaction(tx, address));
+
+    const hasMoreTxs = txsResult.hasMore;
+    const lastTxId = txsResult.txs.length > 0
+      ? txsResult.txs[txsResult.txs.length - 1]?.txid
+      : undefined;
+
+    // Update caches
+    saveBalanceCache(address, balance, balanceUSD);
+    saveTxCache(address, transactions, hasMoreTxs, lastTxId);
 
     return {
-      balance: balance || 0,
-      balanceUSD: balanceUSD || 0,
-      transactions: formattedTransactions || [],
+      ...storedWallet,
+      balance,
+      balanceUSD,
+      transactions,
+      lastUpdated: Date.now(),
+      hasMoreTxs,
+      lastTxId,
     };
   } catch (error) {
-    console.error("Error refreshing wallet data:", error);
-    return {
-      balance: 0,
-      balanceUSD: 0,
-      transactions: [],
-    };
+    console.error("Error force refreshing wallet data:", error);
+    throw error;
   }
+}
+
+/**
+ * Verify a Bitcoin address exists on the blockchain
+ */
+export async function verifyAddress(address: string): Promise<{
+  valid: boolean;
+  error?: string;
+  data?: any;
+}> {
+  // First check format
+  if (!isValidBitcoinAddress(address)) {
+    return { valid: false, error: "Invalid Bitcoin address format" };
+  }
+
+  try {
+    const addressData = await getAddressData(address);
+    return { valid: true, data: addressData };
+  } catch (error: any) {
+    if (error.message?.includes("400") || error.message?.includes("404")) {
+      return { valid: false, error: "Address not found on blockchain" };
+    }
+    return { valid: false, error: "Failed to verify address" };
+  }
+}
+
+/**
+ * Get Bitcoin logo URL
+ */
+export function getBitcoinLogo(): string {
+  return BTC_LOGO;
 }

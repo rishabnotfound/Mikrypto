@@ -1,56 +1,66 @@
 /**
  * TransactionHistory Component
- * Displays list of transactions with animations and filtering
+ * Displays list of Bitcoin transactions with filtering and lazy loading
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Transaction, Currency } from "@/lib/types";
-import { formatCurrency, formatDate, shortenAddress } from "@/lib/utils";
-import { convertCurrencyAsync } from "@/lib/currency";
-import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, Filter } from "lucide-react";
+import { formatDate, shortenAddress } from "@/lib/utils";
+import { loadMoreTransactions } from "@/lib/api";
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  Clock,
+  CheckCircle,
+  Filter,
+  ExternalLink,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 
 interface TransactionHistoryProps {
   transactions: Transaction[];
-  coinSymbol: string;
-  currentPrice: number; // Current crypto price in USD
-  currency: Currency; // User's preferred currency
+  currency: Currency;
+  walletAddress?: string;
+  hasMore?: boolean;
+  lastTxId?: string;
+  onLoadMore?: (newTxs: Transaction[], hasMore: boolean, lastTxId?: string) => void;
 }
 
 type FilterType = "all" | "send" | "receive";
 
 export default function TransactionHistory({
   transactions,
-  coinSymbol,
-  currentPrice,
-  currency
+  currency,
+  walletAddress,
+  hasMore = false,
+  lastTxId,
+  onLoadMore,
 }: TransactionHistoryProps) {
   const [filter, setFilter] = useState<FilterType>("all");
-  const [convertedAmounts, setConvertedAmounts] = useState<Map<string, number>>(new Map());
-
-  // Convert all transaction amounts to user's preferred currency
-  useEffect(() => {
-    const convertAmounts = async () => {
-      const amounts = new Map<string, number>();
-
-      for (const tx of transactions) {
-        const amountInUSD = (tx.amount || 0) * currentPrice; // Convert crypto to USD
-        const converted = await convertCurrencyAsync(amountInUSD, "USD", currency);
-        amounts.set(tx.id, converted);
-      }
-
-      setConvertedAmounts(amounts);
-    };
-
-    convertAmounts();
-  }, [transactions, currentPrice, currency]);
+  const [loading, setLoading] = useState(false);
 
   const filteredTransactions = transactions.filter((tx) => {
     if (filter === "all") return true;
     return tx.type === filter;
   });
+
+  const handleLoadMore = async () => {
+    if (!walletAddress || !lastTxId || !onLoadMore) return;
+
+    setLoading(true);
+    try {
+      const result = await loadMoreTransactions(walletAddress, lastTxId);
+      onLoadMore(result.transactions, result.hasMore, result.lastTxId);
+    } catch (error) {
+      console.error("Error loading more transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusIcon = (status: Transaction["status"]) => {
     switch (status) {
@@ -58,8 +68,6 @@ export default function TransactionHistory({
         return <CheckCircle size={16} className="text-green-500" />;
       case "pending":
         return <Clock size={16} className="text-yellow-500" />;
-      case "failed":
-        return <XCircle size={16} className="text-red-500" />;
     }
   };
 
@@ -69,9 +77,11 @@ export default function TransactionHistory({
         return "text-green-500 bg-green-500/10 border-green-500/30";
       case "pending":
         return "text-yellow-500 bg-yellow-500/10 border-yellow-500/30";
-      case "failed":
-        return "text-red-500 bg-red-500/10 border-red-500/30";
     }
+  };
+
+  const openInMempool = (txHash: string) => {
+    window.open(`https://mempool.space/tx/${txHash}`, "_blank");
   };
 
   return (
@@ -87,7 +97,7 @@ export default function TransactionHistory({
             whileTap={{ scale: 0.95 }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
               filter === type
-                ? "bg-primary/20 text-white border border-primary/40"
+                ? "bg-orange-500/20 text-white border border-orange-500/40"
                 : "bg-dark-tertiary/40 text-gray-400 hover:text-white border border-transparent"
             }`}
           >
@@ -96,6 +106,7 @@ export default function TransactionHistory({
         ))}
         <div className="ml-auto text-sm text-gray-400">
           {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? "s" : ""}
+          {hasMore && " (more available)"}
         </div>
       </div>
 
@@ -118,13 +129,12 @@ export default function TransactionHistory({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ duration: 0.3, delay: Math.min(index * 0.02, 0.5) }}
                 whileHover={{ scale: 1.01 }}
                 className="group relative"
               >
-                {/* Glass morphism card */}
-                <div className="relative overflow-hidden rounded-xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/10 hover:border-primary/30 transition-all duration-300 p-4">
-                  {/* Transaction content */}
+                {/* Transaction card */}
+                <div className="relative overflow-hidden rounded-xl bg-dark-tertiary/40 backdrop-blur-xl border border-orange-500/10 hover:border-orange-500/30 transition-all duration-300 p-4">
                   <div className="flex items-center gap-4">
                     {/* Type icon */}
                     <div
@@ -168,11 +178,13 @@ export default function TransactionHistory({
                             }`}
                           >
                             {tx.type === "receive" ? "+" : "-"}
-                            {(tx.amount || 0).toFixed(4)} {coinSymbol}
+                            {(tx.amount || 0).toFixed(8)} BTC
                           </div>
-                          <div className="text-sm text-gray-400">
-                            {formatCurrency(convertedAmounts.get(tx.id) || 0, currency)}
-                          </div>
+                          {tx.fee && tx.type === "send" && (
+                            <div className="text-xs text-gray-500">
+                              Fee: {tx.fee.toFixed(8)} BTC
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -183,21 +195,53 @@ export default function TransactionHistory({
                         <span>To: {shortenAddress(tx.to, 4)}</span>
                       </div>
 
-                      {/* Transaction hash */}
-                      <div className="mt-2 text-xs text-gray-600">
-                        Hash: {shortenAddress(tx.hash, 6)}
+                      {/* Transaction hash with link */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-gray-600">
+                          Hash: {shortenAddress(tx.hash, 8)}
+                        </span>
+                        <button
+                          onClick={() => openInMempool(tx.hash)}
+                          className="text-orange-500 hover:text-orange-400 transition-colors"
+                          title="View on Mempool.space"
+                        >
+                          <ExternalLink size={12} />
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Hover glow */}
-                <div className="absolute inset-0 -z-10 rounded-xl bg-primary/10 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 -z-10 rounded-xl bg-orange-500/10 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </motion.div>
             ))
           )}
         </AnimatePresence>
       </div>
+
+      {/* Load More Button */}
+      {hasMore && walletAddress && onLoadMore && (
+        <motion.button
+          onClick={handleLoadMore}
+          disabled={loading}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full py-4 rounded-xl bg-dark-tertiary/40 border border-orange-500/20 hover:border-orange-500/40 text-white font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <Loader2 size={20} className="animate-spin" />
+              <span>Loading...</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown size={20} />
+              <span>Load More Transactions</span>
+            </>
+          )}
+        </motion.button>
+      )}
     </div>
   );
 }

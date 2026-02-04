@@ -1,6 +1,6 @@
 /**
  * WalletCard Component
- * Animated card displaying wallet information with glass morphism
+ * Animated card displaying Bitcoin wallet information
  */
 
 "use client";
@@ -8,8 +8,8 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Wallet as WalletType, Currency } from "@/lib/types";
-import { formatCurrency, formatCrypto, shortenAddress, getChainColor, convertCurrency } from "@/lib/utils";
-import { ArrowUpRight, Copy, Check } from "lucide-react";
+import { formatCurrency, formatBTC, shortenAddress, convertCurrency } from "@/lib/utils";
+import { ArrowUpRight, Copy, Check, Bitcoin } from "lucide-react";
 import { useState } from "react";
 
 interface WalletCardProps {
@@ -29,8 +29,6 @@ export default function WalletCard({ wallet, index, currency }: WalletCardProps)
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const chainColor = getChainColor(wallet.chain);
-
   return (
     <Link href={`/wallet/${wallet.id}`}>
       <motion.div
@@ -41,10 +39,10 @@ export default function WalletCard({ wallet, index, currency }: WalletCardProps)
         className="group relative"
       >
         {/* Glass morphism card */}
-        <div className="relative overflow-hidden rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-primary/20 hover:border-primary/40 transition-all duration-300">
+        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-dark-tertiary/40 backdrop-blur-xl border border-orange-500/20 hover:border-orange-500/40 transition-all duration-300">
           {/* Animated gradient overlay */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             animate={{
               backgroundPosition: ["0% 0%", "100% 100%"],
             }}
@@ -56,87 +54,65 @@ export default function WalletCard({ wallet, index, currency }: WalletCardProps)
           />
 
           {/* Card content */}
-          <div className="relative p-6 space-y-4">
-            {/* Header with coin logo and chain */}
+          <div className="relative p-4 sm:p-5 space-y-3 sm:space-y-4">
+            {/* Header with Bitcoin logo */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                {/* Coin logo */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center overflow-hidden">
-                  {wallet.coinLogo ? (
-                    <img
-                      src={wallet.coinLogo}
-                      alt={wallet.coin}
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    <span className="text-primary font-bold text-lg">
-                      {wallet.coinSymbol.charAt(0)}
-                    </span>
-                  )}
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Bitcoin logo */}
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
+                  <Bitcoin size={20} className="text-orange-500 sm:w-6 sm:h-6" />
                 </div>
 
                 {/* Wallet info */}
-                <div>
-                  <h3 className="text-white font-bold text-lg">{wallet.nickname}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span
-                      className="text-xs px-2 py-1 rounded-full border"
-                      style={{
-                        borderColor: `${chainColor}40`,
-                        backgroundColor: `${chainColor}20`,
-                        color: chainColor,
-                      }}
-                    >
-                      {wallet.chain}
-                    </span>
-                  </div>
+                <div className="min-w-0">
+                  <h3 className="text-white font-bold text-base sm:text-lg truncate">{wallet.nickname}</h3>
+                  <span className="inline-block text-xs px-2 py-0.5 rounded-full border border-orange-500/40 bg-orange-500/20 text-orange-500 mt-1">
+                    Bitcoin
+                  </span>
                 </div>
               </div>
 
               {/* External link icon */}
               <motion.div
-                className="text-gray-400 group-hover:text-primary transition-colors"
+                className="text-gray-400 group-hover:text-orange-500 transition-colors flex-shrink-0"
                 whileHover={{ scale: 1.1, rotate: 45 }}
               >
-                <ArrowUpRight size={20} />
+                <ArrowUpRight size={18} />
               </motion.div>
             </div>
 
             {/* Balance */}
-            <div className="space-y-1">
-              <div className="text-3xl font-bold text-white">
+            <div className="space-y-0.5">
+              <div className="text-xl sm:text-2xl font-bold text-white truncate">
                 {formatCurrency(
                   convertCurrency(wallet.balanceUSD, "USD", currency as Currency),
                   currency as Currency
                 )}
               </div>
-              <div className="text-sm text-gray-400">
-                {formatCrypto(wallet.balance, wallet.coinSymbol)}
-              </div>
+              <div className="text-xs sm:text-sm text-gray-400">{formatBTC(wallet.balance)}</div>
             </div>
 
             {/* Address */}
-            <div className="flex items-center justify-between pt-3 border-t border-primary/10">
-              <span className="text-sm text-gray-400">
-                {shortenAddress(wallet.address, 6)}
+            <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-orange-500/10">
+              <span className="text-xs sm:text-sm text-gray-400 font-mono">
+                {shortenAddress(wallet.address, 4)}
               </span>
 
               <motion.button
                 onClick={handleCopyAddress}
-                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="p-2 rounded-lg hover:bg-primary/10 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-500/10 transition-colors"
               >
                 {copied ? (
-                  <Check size={16} className="text-green-500" />
+                  <Check size={14} className="text-green-500 sm:w-4 sm:h-4" />
                 ) : (
-                  <Copy size={16} className="text-gray-400" />
+                  <Copy size={14} className="text-gray-400 sm:w-4 sm:h-4" />
                 )}
               </motion.button>
             </div>
 
             {/* Transaction count */}
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-gray-500">Transactions</span>
               <span className="text-white font-medium">{wallet.transactions.length}</span>
             </div>
@@ -144,7 +120,7 @@ export default function WalletCard({ wallet, index, currency }: WalletCardProps)
         </div>
 
         {/* Glow effect on hover */}
-        <div className="absolute inset-0 -z-10 rounded-2xl bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 -z-10 rounded-2xl bg-orange-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </motion.div>
     </Link>
   );
