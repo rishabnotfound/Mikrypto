@@ -17,9 +17,30 @@ export function useWallets() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(60);
 
-  const loadWallets = useCallback(async () => {
-    setLoading(true);
+  // Sync settings state
+  useEffect(() => {
+    const settings = storage.getSettings();
+    setAutoRefreshEnabled(settings.autoRefresh);
+    setRefreshInterval(settings.refreshInterval);
+
+    // Check for settings changes periodically
+    const checkSettings = setInterval(() => {
+      const currentSettings = storage.getSettings();
+      setAutoRefreshEnabled(currentSettings.autoRefresh);
+      setRefreshInterval(currentSettings.refreshInterval);
+    }, 1000);
+
+    return () => clearInterval(checkSettings);
+  }, []);
+
+  const loadWallets = useCallback(async (isAutoRefresh = false) => {
+    // Don't show loading spinner for auto-refresh
+    if (!isAutoRefresh) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -54,9 +75,25 @@ export function useWallets() {
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     loadWallets();
   }, [loadWallets]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+
+    // refreshInterval is in minutes, convert to milliseconds
+    const intervalMs = refreshInterval * 60 * 1000;
+
+    const intervalId = setInterval(() => {
+      console.log("Auto-refreshing wallet data...");
+      loadWallets(true);
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [autoRefreshEnabled, refreshInterval, loadWallets]);
 
   const addWallet = useCallback(async (nickname: string, address: string): Promise<Wallet> => {
     // Add to storage (just id, nickname, address)
@@ -123,9 +160,28 @@ export function useWallet(id: string) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(60);
 
-  const loadWallet = useCallback(async () => {
-    setLoading(true);
+  // Sync settings state
+  useEffect(() => {
+    const settings = storage.getSettings();
+    setAutoRefreshEnabled(settings.autoRefresh);
+    setRefreshInterval(settings.refreshInterval);
+
+    const checkSettings = setInterval(() => {
+      const currentSettings = storage.getSettings();
+      setAutoRefreshEnabled(currentSettings.autoRefresh);
+      setRefreshInterval(currentSettings.refreshInterval);
+    }, 1000);
+
+    return () => clearInterval(checkSettings);
+  }, []);
+
+  const loadWallet = useCallback(async (isAutoRefresh = false) => {
+    if (!isAutoRefresh) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -147,9 +203,24 @@ export function useWallet(id: string) {
     }
   }, [id]);
 
+  // Initial load
   useEffect(() => {
     loadWallet();
   }, [loadWallet]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+
+    const intervalMs = refreshInterval * 60 * 1000;
+
+    const intervalId = setInterval(() => {
+      console.log("Auto-refreshing single wallet data...");
+      loadWallet(true);
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [autoRefreshEnabled, refreshInterval, loadWallet]);
 
   const refresh = useCallback(() => {
     loadWallet();
